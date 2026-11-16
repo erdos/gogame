@@ -29,6 +29,10 @@
                               (str/join "&"))))]
     (str base path query)))
 
+(let [deployed-at (System/currentTimeMillis)]
+  (defn stylesheet-link []
+    [:link {:rel "stylesheet" :href (->url "style.css" {:ts deployed-at})}]))
+
 (defn page-footer []
   [:footer.site-footer
    [:p "Source code: "
@@ -40,7 +44,7 @@
           [:title "404 Not Found"]
           [:meta {:charset "utf-8"}]
           [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-          [:link {:rel "stylesheet" :href "/style.css"}]]
+          (stylesheet-link)]
          [:body
           [:main.container
            [:h1 "404 - Not Found"]
@@ -56,7 +60,7 @@
      [:title "Go Board Game"]
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-     [:link {:rel "stylesheet" :href "/style.css"}]]
+     (stylesheet-link)]
     [:body
      [:main.container
       [:h1 "Go Board Game"]
@@ -78,7 +82,7 @@
      [:title "New Game Created - Go Board Game"]
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-     [:link {:rel "stylesheet" :href "/style.css"}]]
+     (stylesheet-link)]
     [:body
      [:main.container.container-wide
       [:h1 "Game Created!"]
@@ -183,7 +187,7 @@
        [:script "setTimeout(function(){ location.replace(window.location.href); }, 4000);"])
      (when (and (not my-turn?) (not game-over?))
        [:noscript [:meta {:http-equiv "refresh" :content "4"}]])
-     [:link {:rel "stylesheet" :href "/style.css"}]]
+     (stylesheet-link)]
     [:body
      [:script
       "history.replaceState(null, '', window.location.href);
