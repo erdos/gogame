@@ -7,13 +7,15 @@
 
 (defstate config
   :start (let [f (System/getenv "DB_FILE")]
-           (when-not (str/blank? f) f)))
+           (when (str/blank? f)
+             (throw (ex-info "Missing required environment variable DB_FILE!" {:env "DB_FILE"})))
+           f))
 
 (defstate store
-  :start (let [builder (cond-> (MVStore$Builder.)
-                         @config (.fileName @config)
-                         true (.compress))]
-           (.open builder))
+  :start (-> (MVStore$Builder.)
+             (.fileName @config)
+             (.compress)
+             (.open))
   :stop (.close @store))
 
 (defstate games

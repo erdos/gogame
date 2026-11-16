@@ -363,8 +363,8 @@
       (is (str/includes? css ".toggle-control")))))
 
 (deftest mvstore-storage-test
-  (testing "storage/config holds db-file path string or nil directly (not a map)"
-    (is (or (nil? @config) (string? @config)))
+  (testing "storage/config holds the db-file path string directly (not a map)"
+    (is (string? @config))
     (is (not (map? @config))))
 
   (testing "storage/store and storage/games are MVStore and MVMap defstates"
