@@ -1,7 +1,7 @@
 (ns erdos.gogame.templates
   (:require [clojure.string :as str]
             [erdos.gogame.board :as board]
-            [hiccup.page :refer [html5]]
+            [hiccup2.core :as h]
             [ring.util.codec :as codec]))
 
 (defn ->url [& args]
@@ -28,6 +28,11 @@
                                           (codec/url-encode (to-str v)))))
                               (str/join "&"))))]
     (str base path query)))
+
+;; hiccup2 escapes all strings by default; hiccup.page/html5 does NOT.
+;; Use h/raw only for trusted, constant markup such as inline scripts.
+(defn- html5 [attrs & content]
+  (str (h/html (h/raw "<!DOCTYPE html>\n") [:html attrs content])))
 
 (let [deployed-at (System/currentTimeMillis)]
   (defn stylesheet-link []
@@ -184,13 +189,13 @@
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      (when (and (not my-turn?) (not game-over?))
-       [:script "setTimeout(function(){ location.replace(window.location.href); }, 4000);"])
+       [:script (h/raw "setTimeout(function(){ location.replace(window.location.href); }, 4000);")])
      (when (and (not my-turn?) (not game-over?))
        [:noscript [:meta {:http-equiv "refresh" :content "4"}]])
      (stylesheet-link)]
     [:body
      [:script
-      "history.replaceState(null, '', window.location.href);
+      (h/raw "history.replaceState(null, '', window.location.href);
        document.addEventListener('submit', function(e) {
          if (e.target && e.target.tagName === 'FORM') {
            e.preventDefault();
@@ -204,7 +209,7 @@
              HTMLFormElement.prototype.submit.call(e.target);
            });
          }
-       });"]
+       });")]
      [:main.game
       [:header.status-bar
        [:h1 (str "Go Game (" (:board/size board-spec) "x" (:board/size board-spec) ")")]
@@ -242,10 +247,10 @@
          [:input {:type "hidden" :name "action" :value "pass"}]
          [:button.btn.btn-secondary {:type "submit"} "Pass Turn"]])]
      [:script
-      "['toggle-board-numbering', 'toggle-stone-numbering'].forEach(id => {
+      (h/raw "['toggle-board-numbering', 'toggle-stone-numbering'].forEach(id => {
             const cb = document.getElementById(id);
             if (!cb) return;
             try { const v = localStorage.getItem(id); if (v !== null) cb.checked = v === 'true'; } catch {}
             cb.addEventListener('change', () => { try { localStorage.setItem(id, cb.checked); } catch {} });
-         });"]
+         });")]
      (page-footer)])))
