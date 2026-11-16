@@ -62,6 +62,7 @@
 (defn new-game-handler [{:keys [params] :as req}]
   (let [board-type (-> (:board params)
                        (some-> keyword)
+                       (#(when (contains? board/boards %) %))
                        (or :standard))
         {:keys [game-id black-secret white-secret]} (create-game! board-type)]
     {:status 200
@@ -102,6 +103,11 @@
                                 :error error
                                 :play-url play-url})}))))
 
+(defn- ensure-same [expected f]
+  (fn [current & args]
+    (if (= expected current)
+      (apply f current args)
+      (throw (ex-info "Game was modified concurrently" {:type ::concurrent-modification})))))
 
 (defn move-handler [{:keys [params]} game-id secret]
   (when-let [game (get-game game-id)]
@@ -117,11 +123,11 @@
           (redirect (->url :play game-id secret {:error :turn}) :see-other)
 
           (= action "pass")
-          (do (update-game game-id update :history conj {:color color :pass true})
+          (do (update-game game-id (ensure-same game update) :history conj {:color color :pass true})
               (redirect (->url :play game-id secret) :see-other))
 
           (board/valid-move? board-spec history {:color color :x x :y y})
-          (do (update-game game-id update :history conj {:color color :x x :y y})
+          (do (update-game game-id (ensure-same game update) :history conj {:color color :x x :y y})
               (redirect (->url :play game-id secret) :see-other))
 
           :else
