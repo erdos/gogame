@@ -25,6 +25,6 @@ COPY --from=builder /build/target/gogame-standalone.jar /app/gogame.jar
 
 EXPOSE 3000
 ENV HTTP_PORT=3000
-ENV DB_FILE=/tmp/storage
+ENV DB_FILE=/media/storage
 
 ENTRYPOINT ["java", "-jar", "/app/gogame.jar"]
