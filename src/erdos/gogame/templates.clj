@@ -29,18 +29,25 @@
                               (str/join "&"))))]
     (str base path query)))
 
+(defn page-footer []
+  [:footer.site-footer
+   [:p "Source code: "
+    [:a {:href "https://github.com/erdos/gogame"} "https://github.com/erdos/gogame"]]])
+
 (defn not-found-page []
-  (html5 [:head
+  (html5 {:lang "en"}
+         [:head
           [:title "404 Not Found"]
           [:meta {:charset "utf-8"}]
           [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
           [:link {:rel "stylesheet" :href "/style.css"}]]
          [:body
-          [:div.container
+          [:main.container
            [:h1 "404 - Not Found"]
            [:p "The requested page or game does not exist."]
-           [:div {:style "margin-top: 16px;"}
-            [:a.btn {:href "/"} "Back to Home"]]]]))
+           [:nav.page-actions
+            [:a.btn {:href "/"} "Back to Home"]]]
+          (page-footer)]))
 
 (defn welcome-page []
   (html5
@@ -51,17 +58,18 @@
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:link {:rel "stylesheet" :href "/style.css"}]]
     [:body
-     [:div.container
+     [:main.container
       [:h1 "Go Board Game"]
       [:p "Welcome to Go! Choose a board size and start a game for two players."]
-      [:form {:method "POST" :action "/new-game" :style "margin-top: 16px;"}
-       [:div {:style "margin-bottom: 16px;"}
-        [:label {:for "board-size-select" :style "font-weight: 600; margin-right: 8px;"} "Board Size:"]
+      [:form.new-game-form {:method "POST" :action "/new-game"}
+       [:p.form-field
+        [:label {:for "board-size-select"} "Board Size:"]
         [:select#board-size-select {:name "board"}
          [:option {:value "standard" :selected true} "Standard (19x19)"]
          [:option {:value "intermediate"} "Intermediate (13x13)"]
          [:option {:value "beginner"} "Beginner (9x9)"]]]
-       [:button.btn {:type "submit"} "New Game"]]]]))
+       [:button.btn {:type "submit"} "New Game"]]]
+     (page-footer)]))
 
 (defn game-created-page [{:keys [board-name board-spec black-url white-url]}]
   (html5
@@ -72,19 +80,20 @@
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:link {:rel "stylesheet" :href "/style.css"}]]
     [:body
-     [:div.container.container-wide
+     [:main.container.container-wide
       [:h1 "Game Created!"]
       [:p "Size: " [:strong (str board-name " (" (:board/size board-spec) "x" (:board/size board-spec) ")")]]
       [:p "Share each secret link below with the respective player. Black plays first."]
       [:div.two-columns
-       [:div.column
-        [:h3 [:span.badge.badge-black "Black Player"]]
-        [:div.url-box [:a {:href black-url} black-url]]]
-       [:div.column
-        [:h3 [:span.badge.badge-white "White Player"]]
-        [:div.url-box [:a {:href white-url} white-url]]]]
-      [:div {:style "margin-top: 20px;"}
-       [:a.btn {:href "/"} "Back to Home"]]]]))
+       [:section.column
+        [:h2 [:span.badge.badge-black "Black Player"]]
+        [:p.url-box [:a {:href black-url} black-url]]]
+       [:section.column
+        [:h2 [:span.badge.badge-white "White Player"]]
+        [:p.url-box [:a {:href white-url} white-url]]]]
+      [:nav.page-actions
+       [:a.btn {:href "/"} "Back to Home"]]]
+     (page-footer)]))
 
 (defn render-board
   ([board-map board-spec play-url color interactive?]
@@ -101,17 +110,18 @@
            board-classes ["go-board" (when (and interactive? color) (str "player-" (name color)))]
            ghost-class (when (and interactive? color) (str "ghost-" (name color)))]
        [:table {:class board-classes}
+        [:caption.visually-hidden (str size "x" size " Go board")]
         [:thead
          [:tr.board-coord-row
-          [:th.board-coord-corner]
+          [:td.board-coord-corner]
           (for [x (range size)]
-            [:th.board-coord-col (board/col-label x)])
-          [:th.board-coord-corner]]]
+            [:th.board-coord-col {:scope "col"} (board/col-label x)])
+          [:td.board-coord-corner]]]
         [:tbody
          (for [y (range size)]
            (let [r-label (board/row-label board-spec y)]
              [:tr {:key (str "row-" y)}
-              [:th.board-coord-row-label r-label]
+              [:th.board-coord-row-label {:scope "row"} r-label]
               (for [x (range size)]
                 (let [pos [x y]
                       stone (get board-map pos)
@@ -131,24 +141,27 @@
                                     (when (= y (dec size)) "bottom-edge")]]
                   [:td {:key (str "cell-" x "-" y) :class cell-classes}
                    (when (and is-star? (nil? stone))
-                     [:div.star-point])
+                     [:span.star-point {:aria-hidden "true"}])
                    (cond
-                     (= color :black) [:div.stone.black (when num (str num))]
-                     (= color :white) [:div.stone.white (when num (str num))]
+                     (= color :black) [:span.stone.black {:role "img" :aria-label (str "Black stone at " (board/coord->label board-spec pos))}
+                                       (when num (str num))]
+                     (= color :white) [:span.stone.white {:role "img" :aria-label (str "White stone at " (board/coord->label board-spec pos))}
+                                       (when num (str num))]
                      interactive?
                      [:form.cell-form {:method "POST" :action play-url}
                       [:input {:type "hidden" :name "x" :value (str x)}]
                       [:input {:type "hidden" :name "y" :value (str y)}]
                       [:button {:class ["cell-btn" ghost-class]
                                 :type "submit"
-                                :title (str "Play at " (board/coord->label board-spec pos))}]])]))
-              [:th.board-coord-row-label r-label]]))]
+                                :title (str "Play at " (board/coord->label board-spec pos))
+                                :aria-label (str "Play at " (board/coord->label board-spec pos))}]])]))
+              [:th.board-coord-row-label {:scope "row"} r-label]]))]
         [:tfoot
          [:tr.board-coord-row
-          [:th.board-coord-corner]
+          [:td.board-coord-corner]
           (for [x (range size)]
-            [:th.board-coord-col (board/col-label x)])
-          [:th.board-coord-corner]]]])
+            [:th.board-coord-col {:scope "col"} (board/col-label x)])
+          [:td.board-coord-corner]]]])
      ;; Called as: [board-map board-spec game-id secret color interactive?]
      (render-board board-map board-spec (->url :play arg3 arg4) arg5 arg6 nil)))
   ([board-map board-spec game-id secret color interactive? move-numbers]
@@ -188,47 +201,47 @@
            });
          }
        });"]
-     [:div.status-bar
-      [:h2 (str "Go Game (" (:board/size board-spec) "x" (:board/size board-spec) ")")]
-      [:p
-       "You are playing as "
-       [:span {:class (if (= color :black) "badge badge-black" "badge badge-white")}
-        (str/capitalize (name color))]]
-      [:div.captures
-       [:span "Captured by Black: " [:strong (str black-captured)]]
-       [:span {:style "margin: 0 12px;"} "|"]
-       [:span "Captured by White: " [:strong (str white-captured)]]]
-      (when game-over?
-        [:div.alert-info "Both players passed consecutively. The game is over!"])
-      (when error
-        [:div.alert-error
-         (case error
-           "illegal" "Illegal move! The intersection is occupied, suicidal, or violates the Ko rule."
-           "turn" "Please wait for your turn!"
-           "Invalid move request.")])
-      (when-not game-over?
-        [:p
+     [:main.game
+      [:header.status-bar
+       [:h1 (str "Go Game (" (:board/size board-spec) "x" (:board/size board-spec) ")")]
+       [:p
+        "You are playing as "
+        [:span {:class (if (= color :black) "badge badge-black" "badge badge-white")}
+         (str/capitalize (name color))]]
+       [:ul.captures
+        [:li "Captured by Black: " [:strong (str black-captured)]]
+        [:li "Captured by White: " [:strong (str white-captured)]]]
+       (when game-over?
+         [:p.alert-info {:role "status"} "Both players passed consecutively. The game is over!"])
+       (when error
+         [:p.alert-error {:role "alert"}
+          (case error
+            "illegal" "Illegal move! The intersection is occupied, suicidal, or violates the Ko rule."
+            "turn" "Please wait for your turn!"
+            "Invalid move request.")])
+       (when-not game-over?
          (if my-turn?
-           [:strong {:style "color: #15803d; font-size: 1.1em;"} "Your turn to move!"]
-           [:span {:style "color: #6b7280;"} "Waiting for opponent's move... (auto-refreshing)"])])]
-     [:div.board-controls
-      [:label.toggle-control
-       [:input#toggle-board-numbering {:type "checkbox" :checked true}]
-       " Board Numbering"]
-      [:label.toggle-control
-       [:input#toggle-stone-numbering {:type "checkbox" :checked true}]
-       " Stone Numbering"]]
-     [:div.board-container
-      (render-board current-board board-spec play-url color (and my-turn? (not game-over?)) move-nums)]
-     (when (and my-turn? (not game-over?))
-       [:div {:style "margin-top: 20px; text-align: center;"}
-        [:form {:method "POST" :action play-url :style "display: inline;"}
+           [:p.turn-status.my-turn [:strong "Your turn to move!"]]
+           [:p.turn-status.waiting "Waiting for opponent's move... (auto-refreshing)"]))]
+      [:fieldset.board-controls
+       [:legend.visually-hidden "Display options"]
+       [:label.toggle-control
+        [:input#toggle-board-numbering {:type "checkbox" :checked true}]
+        " Board Numbering"]
+       [:label.toggle-control
+        [:input#toggle-stone-numbering {:type "checkbox" :checked true}]
+        " Stone Numbering"]]
+      [:section.board-container {:aria-label "Game board"}
+       (render-board current-board board-spec play-url color (and my-turn? (not game-over?)) move-nums)]
+      (when (and my-turn? (not game-over?))
+        [:form.pass-form {:method "POST" :action play-url}
          [:input {:type "hidden" :name "action" :value "pass"}]
-         [:button.btn.btn-secondary {:type "submit"} "Pass Turn"]]])
+         [:button.btn.btn-secondary {:type "submit"} "Pass Turn"]])]
      [:script
       "['toggle-board-numbering', 'toggle-stone-numbering'].forEach(id => {
             const cb = document.getElementById(id);
             if (!cb) return;
             try { const v = localStorage.getItem(id); if (v !== null) cb.checked = v === 'true'; } catch {}
             cb.addEventListener('change', () => { try { localStorage.setItem(id, cb.checked); } catch {} });
-         });"]])))
+         });"]
+     (page-footer)])))
