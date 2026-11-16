@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+set -e
+
+REPO_DIR="$( cd "$( dirname -- "$0" )" && pwd )"
+cd "$REPO_DIR"
+
+case "$1" in
+
+  s|serve)
+    shift
+    clojure -M:run "$@"
+    ;;
+
+  r|repl)
+    shift
+    clojure -M:test:repl/rebel "$@"
+    ;;
+
+  t|test|tests)
+    shift
+    clojure -M:test "$@"
+    ;;
+
+  l|lint)
+    clj-kondo --lint src test
+    ;;
+
+  deps|download)
+    echo "Downloading main deps..."
+    clojure -P
+    echo "Downloading :test alias deps..."
+    clojure -P -M:test
+    ;;
+
+  setup)
+    curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh
+    chmod +x linux-install.sh
+    sudo ./linux-install.sh
+    rm ./linux-install.sh
+    ;;
+
+  c|clean)
+    echo "Dropping .cpcache."
+    rm -Rf ./.cpcache
+    echo "Dropping ._ junk files."
+    find . -name "._*" -delete
+    ;;
+
+  *)
+    echo "Usage: $0 {s|serve|r|repl|t|test|tests|l|lint|deps|download|setup|c|clean}"
+    echo ""
+    echo "Commands:"
+    echo "  s, serve         Start the Jetty web server"
+    echo "  r, repl          Start the interactive REPL"
+    echo "  t, test, tests   Run tests (passes extra args to test runner)"
+    echo "  l, lint          Lint the sources and tests with clj-kondo"
+    echo "  deps, download   Download project + test dependencies"
+    echo "  setup            Install the Clojure CLI tools"
+    echo "  c, clean         Clean build/cache artifacts"
+    exit 1
+    ;;
+esac

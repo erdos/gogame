@@ -1,0 +1,22 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.6"}
+        functionalbytes/mount-lite {:mvn/version "2.3.2"}
+        hiccup/hiccup {:mvn/version "2.0.0-RC5"}
+        ring/ring-core {:mvn/version "1.12.2"}
+        ring/ring-defaults {:mvn/version "0.5.0"}
+        com.s-exp/enso {:mvn/version "1.0.0-beta140"}
+        com.h2database/h2-mvstore {:mvn/version "2.5.252"}}
+ :aliases
+ {:run {:main-opts ["-m" "erdos.gogame.core"]}
+  :test {:extra-paths ["test"]
+         :extra-deps {nubank/matcher-combinators {:mvn/version "3.9.1"}
+                      lambdaisland/kaocha {:mvn/version "1.87.1366"}
+                      lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
+         :main-opts ["-m" "kaocha.runner"]}
+  :repl/rebel
+  {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.11"}}
+   :main-opts ["--eval" "(require 'erdos.gogame.core 'erdos.gogame.board 'erdos.gogame.templates)"
+               "-m" "rebel-readline.main"]}
+  :build
+  {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}}
+   :ns-default build}}}

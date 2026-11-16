@@ -1,0 +1,21 @@
+# Clojure CLI cache and build artifacts
+.cpcache/
+target/
+classes/
+*.jar
+*.war
+*.class
+
+# Editors & Tooling
+.calva/
+.lsp/
+.clj-kondo/
+.portal/
+.cider-repl-history
+.nrepl-port
+
+# OS metadata & temporary files
+.DS_Store
+Thumbs.db
+*~
+.#*
