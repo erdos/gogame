@@ -5,7 +5,8 @@
         ring/ring-core {:mvn/version "1.12.2"}
         ring/ring-defaults {:mvn/version "0.5.0"}
         com.s-exp/enso {:mvn/version "1.0.0-beta140"}
-        com.h2database/h2-mvstore {:mvn/version "2.5.252"}}
+        com.h2database/h2-mvstore {:mvn/version "2.5.252"}
+        com.github.clj-easy/graal-build-time {:mvn/version "1.0.6"}}
  :aliases
  {:run {:main-opts ["-m" "erdos.gogame.core"]}
   :test {:extra-paths ["test"]

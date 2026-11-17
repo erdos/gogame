@@ -6,23 +6,37 @@
             [erdos.gogame.templates :as tmpl :refer [->url]]
             [mount.lite :as mount :refer [defstate]]
             [ring.middleware.defaults :refer [site-defaults wrap-defaults]]
-            [ring.util.response :refer [content-type redirect resource-response]]
+            [ring.util.response :as resp :refer [content-type redirect resource-response]]
             [s-exp.enso :as enso])
-  (:import [java.util.concurrent ThreadLocalRandom]))
+  (:import [java.net URL URLConnection]
+           [java.util.concurrent ThreadLocalRandom]))
+
+(defmethod resp/resource-data :resource
+  [^URL url]
+  (try
+    (let [path (.getPath url)]
+      (when (and path (not (.endsWith path "/")))
+        (let [^URLConnection conn (.openConnection url)]
+          {:content        (.getInputStream conn)
+           :content-length (let [len (.getContentLengthLong conn)]
+                             (when (not= len -1) len))
+           :last-modified  (let [lm (.getLastModified conn)]
+                             (when (not= lm 0) (java.util.Date. lm)))})))
+    (catch Throwable _ nil)))
 
 (declare config app server) ; linter happy
 
 (defstate config
   :start {:http-port (-> (System/getenv "HTTP_PORT") (or "3000") parse-long)})
 
-(def ^:private id-alphabet "23456789abcdefghjkmnpqrstuvwxyz")
+(def ^:private ^String id-alphabet "23456789abcdefghjkmnpqrstuvwxyz")
 
 (defn random-id
   "Generates a short, friendly, URL-safe random identifier."
   ([] (random-id 8))
   ([n]
    (let [rnd (ThreadLocalRandom/current)
-         len (count id-alphabet)
+         len (.length id-alphabet)
          sb (StringBuilder. (int n))]
      (dotimes [_ n]
        (.append sb (.charAt id-alphabet (.nextInt rnd len))))
@@ -158,13 +172,27 @@
 
 (defstate app
   :start (wrap-defaults (some-fn #'handler (constantly not-found-page))
-                        (assoc-in site-defaults [:security :anti-forgery] false)))
+                        (-> site-defaults
+                            (assoc-in [:security :anti-forgery] false)
+                            (assoc-in [:static :resources] {:root "public" :prefer-handler? true}))))
 
 (defstate server
   :start (enso/run-server @app {:port (:http-port @config)})
   :stop (enso/stop @server))
 
 (defn -main [& _args]
-  (mount/start)
-  (println (str "Server running on http://localhost:" (:http-port @config)))
-  @(promise))
+  (let [stop (promise)]
+    (.addShutdownHook (Runtime/getRuntime)
+                      (Thread. ^Runnable (fn []
+                                           (mount/stop)
+                                           (deliver stop true))))
+    (try
+      (let [^sun.misc.SignalHandler h (reify sun.misc.SignalHandler
+                                        (handle [_ _sig]
+                                          (System/exit 0)))]
+        (sun.misc.Signal/handle (sun.misc.Signal. "TERM") h)
+        (sun.misc.Signal/handle (sun.misc.Signal. "INT") h))
+      (catch Throwable _ nil))
+    (mount/start)
+    (println (str "Server running on http://localhost:" (:http-port @config)))
+    @stop))
