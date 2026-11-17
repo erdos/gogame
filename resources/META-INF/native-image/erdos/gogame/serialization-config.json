@@ -1,0 +1,29 @@
+{
+  "types": [
+    {"name": "clojure.lang.APersistentMap"},
+    {"name": "clojure.lang.APersistentSet"},
+    {"name": "clojure.lang.APersistentVector"},
+    {"name": "clojure.lang.ASeq"},
+    {"name": "clojure.lang.Keyword"},
+    {"name": "clojure.lang.Symbol"},
+    {"name": "clojure.lang.PersistentArrayMap"},
+    {"name": "clojure.lang.PersistentHashMap"},
+    {"name": "clojure.lang.PersistentHashMap$ArrayNode"},
+    {"name": "clojure.lang.PersistentHashMap$BitmapIndexedNode"},
+    {"name": "clojure.lang.PersistentHashMap$HashCollisionNode"},
+    {"name": "clojure.lang.PersistentHashSet"},
+    {"name": "clojure.lang.PersistentList"},
+    {"name": "clojure.lang.PersistentList$EmptyList"},
+    {"name": "clojure.lang.PersistentVector"},
+    {"name": "clojure.lang.PersistentVector$Node"},
+    {"name": "java.lang.Boolean"},
+    {"name": "java.lang.Double"},
+    {"name": "java.lang.Integer"},
+    {"name": "java.lang.Long"},
+    {"name": "java.lang.Number"},
+    {"name": "java.lang.Object[]"},
+    {"name": "java.lang.String"}
+  ],
+  "lambdaCapturingTypes": [],
+  "proxies": []
+}

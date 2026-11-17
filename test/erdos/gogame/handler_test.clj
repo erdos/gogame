@@ -7,8 +7,11 @@
             [erdos.gogame.test-helpers :refer [clear-games! storage-fixture]]
             [erdos.gogame.templates :as tmpl :refer [->url]]
             [hiccup.core :as hiccup]
-            [matcher-combinators.test :refer [match?]])
-  (:import [org.h2.mvstore MVStore MVMap MVStore$Builder]))
+            [matcher-combinators.test :refer [match?]]
+            [mount.lite :as mount]
+            [ring.util.response :as resp])
+  (:import [java.net URL URLStreamHandler]
+           [org.h2.mvstore MVStore MVMap MVStore$Builder]))
 
 (use-fixtures :once storage-fixture)
 
@@ -75,7 +78,13 @@
   (testing "Pages link to /style.css"
     (let [resp (core/handler {:request-method :get :uri "/"})]
       (is (str/includes? (:body resp) "/style.css"))
-      (is (str/includes? (:body resp) "stylesheet")))))
+      (is (str/includes? (:body resp) "stylesheet"))))
+
+  (testing "resource-data for :resource protocol rejects directory URLs ending in /"
+    (let [dummy-handler (proxy [URLStreamHandler] []
+                          (openConnection [_] nil))
+          dir-url (URL. "resource" "" -1 "/public/" dummy-handler)]
+      (is (nil? (resp/resource-data dir-url))))))
 
 (deftest welcome-page-test
   (testing "GET / returns welcome page with New Game form and size dropdown"
@@ -88,7 +97,14 @@
       (is (str/includes? (:body resp) "select"))
       (is (str/includes? (:body resp) "Standard (19x19)"))
       (is (str/includes? (:body resp) "Intermediate (13x13)"))
-      (is (str/includes? (:body resp) "Beginner (9x9)")))))
+      (is (str/includes? (:body resp) "Beginner (9x9)")))
+
+    (testing "GET / through app middleware returns HTML welcome page"
+      (mount/start #'core/app)
+      (let [resp (@core/app {:request-method :get :uri "/"})]
+        (is (= 200 (:status resp)))
+        (is (str/includes? (get-in resp [:headers "Content-Type"]) "text/html"))
+        (is (str/includes? (:body resp) "New Game"))))))
 
 (deftest create-game-test
   (testing "POST /new-game creates a new game and shows distinct links"
