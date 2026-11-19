@@ -33,11 +33,6 @@ case "$1" in
     clojure -P -M:test
     ;;
 
-  n|native|native-image)
-    shift
-    clojure -T:build native-image "$@"
-    ;;
-
   setup)
     curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh
     chmod +x linux-install.sh
@@ -53,15 +48,14 @@ case "$1" in
     ;;
 
   *)
-    echo "Usage: $0 {s|serve|r|repl|t|test|tests|l|lint|deps|download|n|native|setup|c|clean}"
+    echo "Usage: $0 {s|serve|r|repl|t|test|tests|l|lint|deps|download|setup|c|clean}"
     echo ""
     echo "Commands:"
-    echo "  s, serve         Start the web server"
+    echo "  s, serve         Start the Jetty web server"
     echo "  r, repl          Start the interactive REPL"
     echo "  t, test, tests   Run tests (passes extra args to test runner)"
     echo "  l, lint          Lint the sources and tests with clj-kondo"
     echo "  deps, download   Download project + test dependencies"
-    echo "  n, native        Build GraalVM native image executable"
     echo "  setup            Install the Clojure CLI tools"
     echo "  c, clean         Clean build/cache artifacts"
     exit 1

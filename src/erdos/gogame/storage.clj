@@ -1,7 +1,7 @@
 (ns erdos.gogame.storage
   (:require [clojure.string :as str]
             [mount.lite :refer [defstate]])
-  (:import [org.h2.mvstore MVMap MVStore MVStore$Builder]))
+  (:import [org.h2.mvstore MVStore$Builder]))
 
 (declare config store games)
 
@@ -16,10 +16,10 @@
              (.fileName @config)
              (.compress)
              (.open))
-  :stop (.close ^MVStore @store))
+  :stop (.close @store))
 
 (defstate games
-  :start (.openMap ^MVStore @store "games"))
+  :start (.openMap @store "games"))
 
 (defn update-game
   "Updates the game at game-key by applying fun to its current value (nil if non-existent) and args.
@@ -28,8 +28,8 @@
   (locking @store
     (let [val (get @games game-key)
           new-val (apply fun val args)]
-      (.put ^MVMap @games game-key new-val)
-      (.commit ^MVStore @store)
+      (.put @games game-key new-val)
+      (.commit @store)
       new-val)))
 
 (defn get-game [game-key]
