@@ -130,8 +130,7 @@
             turn (board/current-turn history)
             board-spec (resolve-board-spec (:board game))
             action (:action params)
-            x (some-> (:x params) str parse-long)
-            y (some-> (:y params) str parse-long)]
+            [x y] (some->> (:move params) str (re-matches #"(\d+),(\d+)") rest (map parse-long))]
         (cond
           (not= color turn)
           (redirect (->url :play game-id secret {:error :turn}) :see-other)
@@ -140,7 +139,7 @@
           (do (update-game game-id (ensure-same game update) :history conj {:color color :pass true})
               (redirect (->url :play game-id secret) :see-other))
 
-          (board/valid-move? board-spec history {:color color :x x :y y})
+          (and x y (board/valid-move? board-spec history {:color color :x x :y y}))
           (do (update-game game-id (ensure-same game update) :history conj {:color color :x x :y y})
               (redirect (->url :play game-id secret) :see-other))
 

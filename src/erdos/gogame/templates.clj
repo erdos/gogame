@@ -117,7 +117,7 @@
            stars (or (:board/star-points board-spec) #{})
            size (:board/size board-spec)
            board-classes ["go-board" (when (and interactive? color) (str "player-" (name color)))]
-           ghost-class (when (and interactive? color) (str "ghost-" (name color)))]
+           table
        [:table {:class board-classes}
         [:caption.visually-hidden (str size "x" size " Go board")]
         [:thead
@@ -157,20 +157,20 @@
                      (= color :white) [:span.stone.white {:role "img" :aria-label (str "White stone at " (board/coord->label board-spec pos))}
                                        (when num (str num))]
                      interactive?
-                     [:form.cell-form {:method "POST" :action play-url}
-                      [:input {:type "hidden" :name "x" :value (str x)}]
-                      [:input {:type "hidden" :name "y" :value (str y)}]
-                      [:button {:class ["cell-btn" ghost-class]
-                                :type "submit"
-                                :title (str "Play at " (board/coord->label board-spec pos))
-                                :aria-label (str "Play at " (board/coord->label board-spec pos))}]])]))
+                     [:button.cell-btn {:name "move" :value (str x "," y)
+                                        :title (str "Play at " (board/coord->label board-spec pos))}])]))
               [:th.board-coord-row-label {:scope "row"} r-label]]))]
         [:tfoot
          [:tr.board-coord-row
           [:td.board-coord-corner]
           (for [x (range size)]
             [:th.board-coord-col {:scope "col"} (board/col-label x)])
-          [:td.board-coord-corner]]]])
+          [:td.board-coord-corner]]]]]
+       ;; A single form for the whole board: each empty intersection is a
+       ;; submit button carrying its own coordinates as move=x,y.
+       (if interactive?
+         [:form#board-form.board-form {:method "POST" :action play-url} table]
+         table))
      ;; Called as: [board-map board-spec game-id secret color interactive?]
      (render-board board-map board-spec (->url :play arg3 arg4) arg5 arg6 nil)))
   ([board-map board-spec game-id secret color interactive? move-numbers]
@@ -199,14 +199,23 @@
        document.addEventListener('submit', function(e) {
          if (e.target && e.target.tagName === 'FORM') {
            e.preventDefault();
-           var url = e.target.getAttribute('action') || window.location.href;
+           var form = e.target;
+           var url = form.getAttribute('action') || window.location.href;
+           var data = new FormData(form);
+           var btn = e.submitter;
+           if (btn && btn.name) data.append(btn.name, btn.value);
            fetch(url, {
              method: 'POST',
-             body: new URLSearchParams(new FormData(e.target))
+             body: new URLSearchParams(data)
            }).then(function(res) {
              location.replace(res.url || window.location.href);
            }).catch(function() {
-             HTMLFormElement.prototype.submit.call(e.target);
+             if (btn && btn.name) {
+               var input = document.createElement('input');
+               input.type = 'hidden'; input.name = btn.name; input.value = btn.value;
+               form.appendChild(input);
+             }
+             HTMLFormElement.prototype.submit.call(form);
            });
          }
        });")]
@@ -243,9 +252,8 @@
       [:section.board-container {:aria-label "Game board"}
        (render-board current-board board-spec play-url color (and my-turn? (not game-over?)) move-nums)]
       (when (and my-turn? (not game-over?))
-        [:form.pass-form {:method "POST" :action play-url}
-         [:input {:type "hidden" :name "action" :value "pass"}]
-         [:button.btn.btn-secondary {:type "submit"} "Pass Turn"]])]
+        [:p.pass-form
+         [:button.btn.btn-secondary {:form "board-form" :name "action" :value "pass"} "Pass Turn"]])]
      [:script
       (h/raw "['toggle-board-numbering', 'toggle-stone-numbering'].forEach(id => {
             const cb = document.getElementById(id);

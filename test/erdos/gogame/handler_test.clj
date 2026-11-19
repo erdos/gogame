@@ -163,7 +163,8 @@
       (is (str/includes? (:body resp-black) "Black"))
       (is (str/includes? (:body resp-black) "go-board"))
       (is (str/includes? (:body resp-black) "player-black"))
-      (is (str/includes? (:body resp-black) "ghost-black"))
+      (is (= 1 (count (re-seq #"<form" (:body resp-black)))) "board uses a single form")
+      (is (str/includes? (:body resp-black) "value=\"3,3\""))
       (is (str/includes? (:body resp-black) "Your turn to move!"))
 
       (is (= 200 (:status resp-white)))
@@ -181,13 +182,34 @@
     (is (match? nil? (core/handler {:request-method :post :uri "/play/only-one"})))
     (is (match? nil? (core/handler {:request-method :post :uri "/unknown-post"})))))
 
+(deftest move-param-test
+  (testing "Board buttons submit move=x,y"
+    (clear-games!)
+    (let [{:keys [game-id black-secret]} (create-game!)
+          resp (core/handler {:request-method :post
+                              :uri (->url :play game-id black-secret)
+                              :params {:move "4,2"}})]
+      (is (= 303 (:status resp)))
+      (is (match? [{:color :black :x 4 :y 2}] (:history (get-game game-id))))))
+  (testing "Malformed or missing move param is rejected as illegal"
+    (clear-games!)
+    (let [{:keys [game-id black-secret]} (create-game!)]
+      (doseq [params [{:move "3,abc"} {:move "3"} {:move "-1,2"} {:x "3" :y "3"} {}]]
+        (let [resp (core/handler {:request-method :post
+                                  :uri (->url :play game-id black-secret)
+                                  :params params})]
+          (is (= (->url :play game-id black-secret {:error :illegal})
+                 (get-in resp [:headers "Location"]))
+              (pr-str params))))
+      (is (empty? (:history (get-game game-id)))))))
+
 (deftest gameplay-moves-test
   (testing "Black makes a move, history updates and turn switches to White"
     (clear-games!)
     (let [{:keys [game-id black-secret white-secret]} (create-game!)
           move-resp (core/handler {:request-method :post
                                    :uri (->url :play game-id black-secret)
-                                   :params {:x "3" :y "3"}})]
+                                   :params {:move "3,3"}})]
       (is (match? {:status 303
                    :headers {"Location" (->url :play game-id black-secret)}}
                   move-resp))
@@ -205,13 +227,13 @@
       (let [w-resp (core/handler {:request-method :get :uri (->url :play game-id white-secret)})]
         (is (str/includes? (:body w-resp) "Your turn to move!"))
         (is (str/includes? (:body w-resp) "player-white"))
-        (is (str/includes? (:body w-resp) "ghost-white"))
+        (is (str/includes? (:body w-resp) "player-white"))
         (is (str/includes? (:body w-resp) "stone black")))
 
       ;; White moves
       (let [w-move (core/handler {:request-method :post
                                   :uri (->url :play game-id white-secret)
-                                  :params {:x "15" :y "15"}})]
+                                  :params {:move "15,15"}})]
         (is (match? {:status 303
                      :headers {"Location" (->url :play game-id white-secret)}}
                     w-move))
@@ -222,7 +244,7 @@
     (let [{:keys [game-id white-secret]} (create-game!)
           resp (core/handler {:request-method :post
                               :uri (->url :play game-id white-secret)
-                              :params {:x "3" :y "3"}})]
+                              :params {:move "3,3"}})]
       (is (= 303 (:status resp)))
       (is (str/includes? (get-in resp [:headers "Location"]) "error=turn"))))
 
@@ -232,11 +254,11 @@
       ;; Black plays at [3 3]
       (core/handler {:request-method :post
                      :uri (->url :play game-id black-secret)
-                     :params {:x "3" :y "3"}})
+                     :params {:move "3,3"}})
       ;; White tries to play on occupied [3 3]
       (let [resp (core/handler {:request-method :post
                                 :uri (->url :play game-id white-secret)
-                                :params {:x "3" :y "3"}})]
+                                :params {:move "3,3"}})]
         (is (= 303 (:status resp)))
         (is (str/includes? (get-in resp [:headers "Location"]) "error=illegal"))
         ;; History still only has Black's move
@@ -315,11 +337,11 @@
       ;; Move 1: Black plays at [4 4]
       (core/handler {:request-method :post
                      :uri (->url :play game-id black-secret)
-                     :params {:x "4" :y "4"}})
+                     :params {:move "4,4"}})
       ;; Move 2: White plays at [2 2]
       (core/handler {:request-method :post
                      :uri (->url :play game-id white-secret)
-                     :params {:x "2" :y "2"}})
+                     :params {:move "2,2"}})
 
       (let [b-resp (core/handler {:request-method :get :uri (->url :play game-id black-secret)})
             body (:body b-resp)]
@@ -359,7 +381,7 @@
       ;; Make a move so stone number 1 exists
       (core/handler {:request-method :post
                      :uri (->url :play game-id black-secret)
-                     :params {:x "4" :y "4"}})
+                     :params {:move "4,4"}})
       (let [resp (core/handler {:request-method :get :uri (->url :play game-id white-secret)})
             body (:body resp)]
         (is (= 200 (:status resp)))
